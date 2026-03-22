@@ -2,92 +2,78 @@ import Phaser from "phaser";
 import { TILE_SIZE, SCALE, COLORS } from "../constants";
 
 /**
- * BootScene — generates all placeholder art as textures.
- * No external assets needed. Everything is drawn procedurally.
- * This lets us iterate on gameplay without waiting for art.
+ * BootScene — loads assets from the Pajama Studio asset system.
+ *
+ * Assets are served via the API at /api/v1/assets/file/{assetId}.
+ * Fallback: generates procedural textures if asset loading fails.
  */
+
+// Asset IDs from the Pajama Game Studio asset system
+const ASSET_BASE = "https://api.pajama.studio/api/v1/assets/file";
+const ASSETS: Record<string, string> = {
+  "player": "asset_79c7c91ba4af4386",
+  "npc-elder": "asset_e2e885485279413e",
+  "npc-guard": "asset_77ce68af69174bbe",
+  "npc-merchant": "asset_b9c06335bb024351",
+  "slime": "asset_fb55a85874d24b78",
+  "boss": "asset_9d60e493fd1648ce",
+  "tile-grass": "asset_8c06fe1201ab49dc",
+  "tile-path": "asset_df1b172a42fc4411",
+  "tile-dungeon-floor": "asset_1dc53386746f43a8",
+};
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("BootScene");
   }
 
+  preload() {
+    // Load assets from CDN
+    for (const [key, assetId] of Object.entries(ASSETS)) {
+      this.load.image(key, `${ASSET_BASE}/${assetId}`);
+    }
+
+    // Loading bar
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    const bar = this.add.rectangle(w / 2, h / 2, 0, 16, COLORS.player);
+    this.load.on("progress", (p: number) => {
+      bar.width = w * 0.6 * p;
+    });
+    this.load.on("complete", () => bar.destroy());
+  }
+
   create() {
-    this.generateTextures();
+    const s = TILE_SIZE * SCALE;
+
+    // Generate fallback/additional textures that aren't loaded from CDN
+    this.generateFallbackTextures(s);
+
     this.scene.start("TitleScene");
   }
 
-  private generateTextures() {
-    const s = TILE_SIZE * SCALE; // 32px rendered size
+  private generateFallbackTextures(s: number) {
+    // Generate textures only for assets not loaded from CDN
+    const fallbacks: Record<string, number> = {
+      "tile-water": COLORS.water,
+      "tile-wall": COLORS.wall,
+      "tile-tree": COLORS.tree,
+      "tile-door": COLORS.door,
+      "tile-roof": COLORS.roof,
+      "tile-dungeon-wall": 0x2a2a3e,
+    };
 
-    // Player sprite (blue character with eyes)
-    this.createCharTexture("player", COLORS.player, s);
-
-    // NPC sprites
-    this.createCharTexture("npc-elder", 0xff8844, s);
-    this.createCharTexture("npc-guard", 0x88aa44, s);
-    this.createCharTexture("npc-merchant", 0xddaa22, s);
-
-    // Enemy sprites
-    this.createEnemyTexture("slime", 0x44cc44, s);
-    this.createEnemyTexture("boss", COLORS.boss, s * 1.5);
-
-    // Tile textures (single tile-sized)
-    this.createTileTexture("tile-grass", COLORS.grass);
-    this.createTileTexture("tile-path", COLORS.path);
-    this.createTileTexture("tile-water", COLORS.water);
-    this.createTileTexture("tile-wall", COLORS.wall);
-    this.createTileTexture("tile-tree", COLORS.tree);
-    this.createTileTexture("tile-door", COLORS.door);
-    this.createTileTexture("tile-roof", COLORS.roof);
-    this.createTileTexture("tile-dungeon-floor", 0x3a3a4e);
-    this.createTileTexture("tile-dungeon-wall", 0x2a2a3e);
-  }
-
-  private createCharTexture(key: string, color: number, size: number) {
-    const g = this.make.graphics({ x: 0, y: 0 });
-    // Body
-    g.fillStyle(color);
-    g.fillRoundedRect(size * 0.15, size * 0.1, size * 0.7, size * 0.85, 4);
-    // Eyes
-    g.fillStyle(0xffffff);
-    g.fillCircle(size * 0.35, size * 0.35, size * 0.08);
-    g.fillCircle(size * 0.65, size * 0.35, size * 0.08);
-    g.fillStyle(0x000000);
-    g.fillCircle(size * 0.37, size * 0.36, size * 0.04);
-    g.fillCircle(size * 0.67, size * 0.36, size * 0.04);
-    g.generateTexture(key, size, size);
-    g.destroy();
-  }
-
-  private createEnemyTexture(key: string, color: number, size: number) {
-    const g = this.make.graphics({ x: 0, y: 0 });
-    // Blob body
-    g.fillStyle(color);
-    g.fillEllipse(size * 0.5, size * 0.55, size * 0.8, size * 0.7);
-    // Eyes
-    g.fillStyle(0xffffff);
-    g.fillCircle(size * 0.35, size * 0.45, size * 0.1);
-    g.fillCircle(size * 0.65, size * 0.45, size * 0.1);
-    g.fillStyle(0x000000);
-    g.fillCircle(size * 0.37, size * 0.47, size * 0.05);
-    g.fillCircle(size * 0.67, size * 0.47, size * 0.05);
-    g.generateTexture(key, size, size);
-    g.destroy();
-  }
-
-  private createTileTexture(key: string, color: number) {
-    const s = TILE_SIZE * SCALE;
-    const g = this.make.graphics({ x: 0, y: 0 });
-    g.fillStyle(color);
-    g.fillRect(0, 0, s, s);
-    // Add subtle noise/variation
-    g.fillStyle(0x000000, 0.08);
-    for (let i = 0; i < 4; i++) {
-      const x = Math.random() * s;
-      const y = Math.random() * s;
-      g.fillRect(x, y, 2, 2);
+    for (const [key, color] of Object.entries(fallbacks)) {
+      if (this.textures.exists(key)) continue;
+      const g = this.make.graphics({ x: 0, y: 0 });
+      g.fillStyle(color);
+      g.fillRect(0, 0, s, s);
+      g.fillStyle(0x000000, 0.08);
+      for (let i = 0; i < 4; i++) {
+        g.fillRect(Math.random() * s, Math.random() * s, 2, 2);
+      }
+      g.generateTexture(key, s, s);
+      g.destroy();
     }
-    g.generateTexture(key, s, s);
-    g.destroy();
   }
 }
