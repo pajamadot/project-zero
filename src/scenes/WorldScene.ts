@@ -10,6 +10,7 @@ import {
   TRANSITIONS, BOSS_POSITION,
 } from "../data/maps";
 import { NPC_DATA } from "../data/npcs";
+import { fadeOut, fadeIn, battleTransition } from "../systems/Effects";
 
 const CELL = TILE_SIZE * SCALE;
 const MAP_W = 25;
@@ -43,6 +44,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.loadMap("village", 12, 8);
     this.createHUD();
+    fadeIn(this, 600);
   }
 
   private loadMap(mapName: string, spawnX: number, spawnY: number) {
@@ -135,7 +137,10 @@ export class WorldScene extends Phaser.Scene {
           this.player.teleport(gx, gy - 1);
           return;
         }
-        this.loadMap(t.toMap, t.toX, t.toY + 1);
+        fadeOut(this, 300).then(() => {
+          this.loadMap(t.toMap, t.toX, t.toY + 1);
+          fadeIn(this, 300);
+        });
         return;
       }
     }
@@ -237,6 +242,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private startBattle(enemyType: string) {
+    battleTransition(this).then(() => {
+      this.scene.pause();
+    });
     this.scene.launch("BattleScene", {
       enemyType,
       playerHP: this.player.getData("hp") as number || 30,
@@ -265,7 +273,6 @@ export class WorldScene extends Phaser.Scene {
         this.gameOver();
       },
     });
-    this.scene.pause();
   }
 
   private createHUD() {

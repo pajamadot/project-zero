@@ -6,6 +6,7 @@ import {
   BattleState, createBattleState,
   playerAttack, playerDefend, playerUsePotion, playerFlee, enemyTurn,
 } from "../systems/BattleSystem";
+import { showDamageNumber, healSparkle, hitFlash, cameraShake, fadeIn, menuBounce } from "../systems/Effects";
 
 interface BattleData {
   enemyType: string;
@@ -107,12 +108,15 @@ export class BattleScene extends Phaser.Scene {
       this.selectedMenu = Math.min(MENU_ITEMS.length - 1, this.selectedMenu + 1);
     });
 
+    fadeIn(this, 300);
+
     const onSelect = () => {
       if (this.battleOver) {
         this.endBattle();
         return;
       }
       if (!this.playerTurn) return;
+      if (this.menuTexts[this.selectedMenu]) menuBounce(this, this.menuTexts[this.selectedMenu]);
       this.executePlayerAction();
     };
     selectKey.on("down", onSelect);
@@ -126,9 +130,15 @@ export class BattleScene extends Phaser.Scene {
     this.playerTurn = false;
 
     switch (action) {
-      case "Attack":
+      case "Attack": {
+        const hpBefore = this.state.enemyHP;
         playerAttack(this.state);
+        const dmg = hpBefore - this.state.enemyHP;
+        showDamageNumber(this, this.enemySprite.x, this.enemySprite.y - 30, dmg);
+        hitFlash(this, this.enemySprite);
+        cameraShake(this, 0.005, 100);
         break;
+      }
       case "Defend":
         playerDefend(this.state);
         break;
@@ -140,7 +150,11 @@ export class BattleScene extends Phaser.Scene {
           return;
         }
         this.data_.inventory.removeItem("potion");
+        const hpBefore = this.state.playerHP;
         playerUsePotion(this.state);
+        const healed = this.state.playerHP - hpBefore;
+        showDamageNumber(this, GAME_WIDTH / 4, GAME_HEIGHT - 220, healed, true);
+        healSparkle(this, GAME_WIDTH / 4, GAME_HEIGHT - 200);
         break;
       }
       case "Flee": {
@@ -174,7 +188,13 @@ export class BattleScene extends Phaser.Scene {
 
     // Enemy turn after delay
     this.time.delayedCall(600, () => {
+      const hpBefore = this.state.playerHP;
       enemyTurn(this.state);
+      const dmg = hpBefore - this.state.playerHP;
+      if (dmg > 0) {
+        showDamageNumber(this, GAME_WIDTH / 4, GAME_HEIGHT - 230, dmg);
+        cameraShake(this, 0.008, 120);
+      }
       this.updateUI();
 
       // Check player death
