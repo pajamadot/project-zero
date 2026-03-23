@@ -8,14 +8,12 @@ import { QuestSystem, QuestState } from "../systems/QuestSystem";
 import { saveGame, loadGame, type SaveData } from "../systems/SaveSystem";
 import {
   VILLAGE_MAP, DUNGEON_MAP, SOLID_TILES, TILE_TEXTURES,
-  TRANSITIONS, BOSS_POSITION,
+  TRANSITIONS, BOSS_POSITION, MAP_W, MAP_H,
 } from "../data/maps";
 import { NPC_DATA } from "../data/npcs";
 import { fadeOut, fadeIn, battleTransition } from "../systems/Effects";
 
 const CELL = TILE_SIZE * SCALE;
-const MAP_W = 25;
-const MAP_H = 19;
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -59,7 +57,7 @@ export class WorldScene extends Phaser.Scene {
     this.inventory.addItem({ id: "potion", name: "Potion", type: "consumable", power: 15 });
     this.inventory.addItem({ id: "potion", name: "Potion", type: "consumable", power: 15 });
 
-    this.loadMap("village", 12, 8);
+    this.loadMap("village", 13, 10);
     this.createHUD();
     this.showAreaName("Sleepy Village");
     fadeIn(this, 600);

@@ -5,8 +5,9 @@ export interface NPCDef {
   texture: string;
 }
 
+// NPCs positioned to NOT block any paths
 export const NPC_DATA: NPCDef[] = [
-  { name: "Elder", gridX: 12, gridY: 7, texture: "npc-elder" },
-  { name: "Guard", gridX: 11, gridY: 15, texture: "npc-guard" },
-  { name: "Merchant", gridX: 21, gridY: 14, texture: "npc-merchant" },
+  { name: "Elder", gridX: 10, gridY: 9, texture: "npc-elder" },      // Inside village square, off the path
+  { name: "Guard", gridX: 15, gridY: 17, texture: "npc-guard" },     // Near south exit but NOT on the path
+  { name: "Merchant", gridX: 25, gridY: 4, texture: "npc-merchant" }, // Near the shop building, out of the way
 ];
